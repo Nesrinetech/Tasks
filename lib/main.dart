@@ -101,14 +101,15 @@ class MyApp extends StatelessWidget {
 
 
 
-      @overrideWidget build(BuildContext context) {
+      @override
+      Widget build(BuildContext context) {
         // card widget
         return Card(
           color: Colors.black,
-          eleveation: 6,
+          elevation: 6,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Column(
-            crossAxisAliAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Creating the Header ( profile picture + username + follow button)
               Padding(
