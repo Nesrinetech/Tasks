@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:ui' as ui;
 
 void main() {
  runApp(const MyApp());
@@ -13,7 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Instagram Post',
-      theme: ThemeData.dart(),
+      theme: ThemeData.dark(),
       home: const PostPage()
         );
       }
@@ -21,7 +24,7 @@ class MyApp extends StatelessWidget {
 
   // home screen widget
   class PostPage extends StatefulWidget {
-    const PostPage({super.key)};
+    const PostPage({super.key});
 
     @override
     State<PostPage> createState() => _PostPageState();
@@ -30,7 +33,7 @@ class MyApp extends StatelessWidget {
 
   // state for postpage to handle UI and logic
   class _PostPageState extends State<PostPage> {
-    final GlobaleKey _postKey = GlobaleKey();
+    final GlobalKey _postKey = GlobalKey();
 
     // function to capture the widget as image and share it
     Future<void> _sharePost() async {
@@ -39,7 +42,7 @@ class MyApp extends StatelessWidget {
         final boundary = _postKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
         
         final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-        final ByteDat? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
         final Uint8List pngBytes = byteData!.buffer.asUint8List();
 
 
@@ -49,7 +52,7 @@ class MyApp extends StatelessWidget {
 
     @override
     Widget build(BuildContext context) {
-      return Scanffold(
+      return Scaffold(
         appBar: AppBar(
           title: const Text('Instagram Post'),
           centerTitle: true,
@@ -137,6 +140,8 @@ class MyApp extends StatelessWidget {
                 ),
               ),
 
+
+// 3
               // Image with overlay text
               AspectRatio(
                 aspectRatio: 1.2,
@@ -240,8 +245,157 @@ class MyApp extends StatelessWidget {
         );
       }
     }
-   
-   
-   
+
+
+
+
+
+
+    // Data models
+
+//   Task 4
+    // Post model 
+
+    class Post {
+      final int id;
+      final int userId;
+      final String title;
+      final String body;
+
+      // constructor
+      Post({
+        required this.id,
+        required this.userId,
+        required this.title,
+        required this.body,
+      });
+
+      // Post from JSON map
+      factory Post.fromJson(Map<String, dynamic> json) {
+        return Post(
+          id: json['id'] as int,
+          userId: json['userId'] as int,
+          title: json['title'] as String,
+          body: json['body'] as String,
+        );
+      }
+    }
+
+    // comment model (comment fetched from the API )
+
+    class CommentModel {
+      final int id;
+      final int postId;
+      final String name;
+      final String email;
+      final String body;
+
+      // constructor
+      CommentModel({
+        required this.id,
+        required this.postId,
+        required this.name,
+        required this.email,
+        required this.body,
+      });
+
+      // Post from JSON map
+      factory  CommentModel.fromJson(Map<String, dynamic> json) {
+        return  CommentModel(
+          id: json['id'] as int,
+          postId: json['postId'] as int,
+          name: json['name'] as String,
+          email: json['email'] as String,
+          body: json['body'] as String,
+        );
+      }
+      // convert to json useful for post
+      Map<String, dynamic> toJson() {
+        return {
+          'id': id,
+          'postId': postId,
+          'name': name,
+          'email': email,
+          'body': body,
+        };
+      }
+    }
+    
+    // Task 5 API service to fetch posts and comments using 
+      class ApiService {
+        final String baseUrl;
+        final String? apiKey;
+
+
+        ApiService({required this.baseUrl, this.apiKey});
+        // builds request headers
+        Map<String, String> _headers() {
+          final headers = <String, String>{
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          };
+          if (apiKey != null && apiKey!.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $apiKey';
+          }
+          return headers;
+        }
+        // GET /posts
+        
+      Future<List<Post>> fetchPosts() async {
+        final url = Uri.parse('$baseUrl/posts');
+        final response = await http.get(url, headers: _headers());
+        if (response.statusCode == 200) {
+          final List parsed = jsonDecode(response.body) as List;
+          return parsed.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+
+        } else 
+        {
+          throw Exception('Failed to load posts: ${response.statusCode}');
+        }
+      }
+
+      // GET/posts/{postId}/comments
+        Future<List<CommentModel>> fetchCommentsForPost(int postId) async {
+        final url = Uri.parse('$baseUrl/posts/$postId/comments');
+        final response = await http.get(url, headers: _headers());
+        if (response.statusCode == 200) {
+          final List parsed = jsonDecode(response.body) as List;
+          return parsed.map((e) => CommentModel.fromJson(e as Map<String, dynamic>)).toList();
+
+        } else 
+        {
+          throw Exception('Failed to load comments: ${response.statusCode}');
+        }
+      }
+
+
+      // POST /comments 
+         Future<List<CommentModel>> postComment({
+          required int postId,
+          required String name,
+          required String email,
+          required String body,
+         }) async {
+        final url = Uri.parse('$baseUrl/comments');
+        final payload = jsonEncode({
+          'postId': postId,
+          'name': name,
+          'email': email,
+          'body': body,
+        });
+
+        final response = await http.post(url, headers: _headers(), body: payload);
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final Map<String, dynamic> parsed = jsonDecode(response.body) as Map<String, dynamic>;
+          return CommentModel.fromJson(parsed);
+
+        } else 
+        {
+          throw Exception('Failed to load comments: ${response.statusCode}');
+        }
+        }
+       
+      }
    
   
